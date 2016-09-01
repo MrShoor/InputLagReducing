@@ -186,7 +186,7 @@ procedure TfrmMain.FormCreate(Sender: TObject);
         for k := 0 to ACounts.z - 1 do
         begin
           inst.aiPosition := Vec(i, j, k) * 4 + offset;
-          inst.aiColor := Vec(Random, Random, Random, 0);
+          inst.aiColor := Vec(i/ACounts.x, j/ACounts.y, k/ACounts.z, 0);
           instances.Add(inst);
         end;
     Result := instances as IVerticesData;
@@ -260,15 +260,22 @@ procedure TfrmMain.RenderScene(ASender: TObject);
 var
   i: Integer;
   currentTime, dTime: Int64;
+  WaitMethod: Integer;
 begin
+  WaitMethod := 0;
+  if rbQueryEvent.Checked then
+    WaitMethod := 1
+  else
+    if rbGenerateMips.Checked then
+      WaitMethod := 2;
+
   if FCtx = nil then Exit;
   if FCtx.Bind then
   try
-    if rbQueryEvent.Checked then SyncQueryWaitEvent;
-    if rbGenerateMips.Checked then SyncTexWaitEvent;
-    ProcessInputMessages;
-
-    FCtx.Clear(Vec(0,0,0,0));
+    case WaitMethod of //ждем евента
+      1: SyncQueryWaitEvent;
+      2: SyncTexWaitEvent;
+    end;
     FCtx.States.DepthTest := True;
 
     FFrame.FrameRect := RectI(0, 0, FCtx.WindowSize.x, FCtx.WindowSize.y);
@@ -276,6 +283,7 @@ begin
     FFrame.Clear(0, Vec(0.0,0.2,0.4,0));
     FFrame.ClearDS(FCtx.Projection.DepthRange.y);
 
+    ProcessInputMessages; //собираем свежие Input данные
     FShader.Select;
     FShader.SetAttributes(FBuffer, nil, FInstances);
     FShader.SetUniform('CycleCount', tbCycle.Position*1.0);
@@ -284,9 +292,10 @@ begin
 
     FFrame.BlitToWindow(0);
 
-    if rbQueryEvent.Checked then SyncQuerySetEvent;
-    if rbGenerateMips.Checked then SyncTexSetEvent;
-
+    case WaitMethod of //устанавливаем евент
+      1: SyncQuerySetEvent;
+      2: SyncTexSetEvent;
+    end;
     FRawSwapChain.Present(0,0);
   finally
     FCtx.Unbind;
