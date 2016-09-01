@@ -6,7 +6,7 @@ unit untMain;
 interface
 
 uses
-  LCLType, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
+  Windows, LCLType, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
   ExtCtrls, ComCtrls, StdCtrls, avRes, avTypes, mutils, avTess, avContnrs,
   avCameraController, D3D11_JSB, DXGI_JSB, avContext_DX11;
 
@@ -248,6 +248,15 @@ begin
 end;
 
 procedure TfrmMain.RenderScene(ASender: TObject);
+  procedure ProcessInputMessages;
+  var msg: Windows.TMsg;
+  begin
+    while PeekMessage(msg, 0, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE) do
+    begin
+      TranslateMessage(msg);
+      DispatchMessage(msg);
+    end;
+  end;
 var
   i: Integer;
   currentTime, dTime: Int64;
@@ -257,6 +266,7 @@ begin
   try
     if rbQueryEvent.Checked then SyncQueryWaitEvent;
     if rbGenerateMips.Checked then SyncTexWaitEvent;
+    ProcessInputMessages;
 
     FCtx.Clear(Vec(0,0,0,0));
     FCtx.States.DepthTest := True;
